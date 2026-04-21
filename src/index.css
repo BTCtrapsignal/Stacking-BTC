@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html, body, #root {
+    height: 100%;
+    background-color: #0b0c0e;
+    color: #eceef3;
+  }
+
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  /* Number / mono values */
+  .mono { font-family: 'Space Mono', 'Courier New', monospace; }
+
+  /* Card base */
+  .card {
+    @apply bg-card border border-border rounded-card p-5;
+  }
+
+  /* Section label (eyebrow) */
+  .label-xs {
+    @apply text-[10px] font-semibold tracking-[0.07em] uppercase text-muted;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply bg-primary text-bg font-bold rounded-chip px-5 py-2.5 text-sm
+           hover:opacity-90 active:opacity-75 transition-opacity;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply bg-card border border-border text-secondary font-semibold
+           rounded-chip px-4 py-2 text-sm hover:bg-border transition-colors;
+  }
+
+  /* Progress bar track */
+  .progress-track {
+    @apply h-1.5 bg-border rounded-full overflow-hidden;
+  }
+
+  /* Positive / negative */
+  .positive { @apply text-green; }
+  .negative { @apply text-red;   }
+}
+
+/* Scrollbar (webkit) */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #252830; border-radius: 999px; }
+
+/* Dialog / Sheet */
+dialog { padding: 0; border: none; background: transparent; }
+dialog::backdrop { background: rgba(0,0,0,0.5); }
