@@ -36,10 +36,10 @@ export function DcaPage({ state, onEditPlan }) {
         <span className="label-xs">DCA STACK</span>
 
         {/* Two-column: big BTC left, meta right */}
-        <div className="grid grid-cols-[1fr_auto] gap-4 items-start mt-3">
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-center mt-3">
 
           {/* LEFT — centered large BTC value */}
-          <div className="flex flex-col items-center text-center py-2">
+          <div className="flex flex-col items-center justify-center text-center w-full py-2">
             <div className="flex items-baseline gap-1.5">
               <span
                 className="font-mono font-bold leading-none"
@@ -93,10 +93,10 @@ export function DcaPage({ state, onEditPlan }) {
         </div>
 
         {/* Two-column: big est. BTC centered left, mini stats right */}
-        <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-center">
 
           {/* LEFT — centered */}
-          <div className="flex flex-col items-center text-center py-1">
+          <div className="flex flex-col items-center justify-center text-center w-full py-1">
             <span
               className="font-mono font-bold leading-none"
               style={{

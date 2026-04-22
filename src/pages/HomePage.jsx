@@ -1,16 +1,13 @@
-/**
- * HomePage — premium BTC dashboard.
- * All colors via CSS variables → works in light + dark.
- */
 import { useMemo } from 'react'
-import { Card, CardHead }   from '../components/shared/Card'
-import { StatCard }         from '../components/shared/StatCard'
-import { EntryRow }         from '../components/shared/EntryRow'
-import { ProgressBar }      from '../components/shared/ProgressBar'
-import { computeMetrics }   from '../utils/metrics'
+import { Card, CardHead }        from '../components/shared/Card'
+import { EntryRow }              from '../components/shared/EntryRow'
+import { ProgressBar }           from '../components/shared/ProgressBar'
+import { PortfolioChart }        from '../components/home/PortfolioChart'
+import { PortfolioBreakdown }    from '../components/home/PortfolioBreakdown'
+import { computeMetrics }        from '../utils/metrics'
 import {
   fmtBtc, fmtUsdCompact, fmtThbCompact,
-  fmtPct, fmtDate, sortDesc,
+  fmtPct, fmtDate,
 } from '../utils/format'
 
 const $$ = (v, d = 2) => {
@@ -19,14 +16,18 @@ const $$ = (v, d = 2) => {
 }
 
 export function HomePage({ state, onEditGoal }) {
-  const m = useMemo(() => computeMetrics(state), [state])
+  const m          = useMemo(() => computeMetrics(state), [state])
   const { settings } = state
 
-  const goalPct   = Math.min(100, (m.totalBtc / settings.goalBtc) * 100)
-  const heroUsd   = m.totalBtc * m.price
-  const remaining = Math.max(0, settings.goalBtc - m.totalBtc)
+  const goalPct    = Math.min(100, (m.totalBtc / settings.goalBtc) * 100)
+  const heroUsd    = m.totalBtc * m.price
+  const heroThb    = heroUsd * m.usdthb
+  const remaining  = Math.max(0, settings.goalBtc - m.totalBtc)
 
-  /* recent rows */
+  const unrealPnlUsd = heroUsd - m.totalInv
+  const unrealPnlPct = m.totalInv > 0 ? (unrealPnlUsd / m.totalInv) * 100 : 0
+  const unrealPos    = unrealPnlUsd >= 0
+
   const recentRows = useMemo(() => [
     ...state.dca.slice(0, 3).map(x => ({
       kind: 'dca', badge: 'DCA',
@@ -47,92 +48,125 @@ export function HomePage({ state, onEditGoal }) {
 
   return (
     <>
-      {/* ── Hero ─────────────────────────────────── */}
-      <Card>
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <span className="label-xs">TOTAL BTC HOLDINGS</span>
-            <div className="flex items-baseline gap-2 mt-1.5">
-              <span
-                className="font-mono font-bold leading-none"
-                style={{ fontSize: 52, letterSpacing: '-0.05em', color: 'var(--text)' }}
-              >
-                {fmtBtc(m.totalBtc, 4)}
-              </span>
-              <span className="text-[18px] font-bold" style={{ color: 'var(--muted)' }}>BTC</span>
-            </div>
-            <p className="font-mono text-[13px] mt-1" style={{ color: 'var(--muted)' }}>
-              ≈ {fmtUsdCompact(heroUsd)} · {fmtThbCompact(heroUsd * m.usdthb)}
-            </p>
-          </div>
+      {/* ── 1) HERO CARD ─────────────────────────── */}
+      <div
+        className="rounded-[20px] p-5"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex items-start justify-between mb-1">
+          <span className="label-xs">TOTAL BTC HOLDINGS</span>
           <button
             onClick={onEditGoal}
-            className="mt-1 px-3.5 py-1.5 rounded-chip text-[12px] font-semibold shrink-0"
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-chip shrink-0"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text2)' }}
           >
             Edit Goal
           </button>
         </div>
 
+        <div className="flex items-baseline gap-2 mt-1 mb-1">
+          <span
+            className="font-mono font-bold leading-none"
+            style={{ fontSize: 56, letterSpacing: '-0.05em', color: 'var(--text)' }}
+          >
+            {fmtBtc(m.totalBtc, 4)}
+          </span>
+          <span className="font-bold text-[20px]" style={{ color: 'var(--muted)', letterSpacing: '-0.02em' }}>
+            BTC
+          </span>
+        </div>
+
+        <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--muted)' }}>
+          ≈ {fmtUsdCompact(heroUsd)}&nbsp;·&nbsp;{fmtThbCompact(heroThb)}
+        </p>
+
         <ProgressBar pct={goalPct} color="default" />
 
-        <div
-          className="grid grid-cols-3 gap-3 mt-3 pt-3"
-          style={{ borderTop: '1px solid var(--border)' }}
-        >
-          <Foot label="REMAINING" value={`${fmtBtc(remaining, 4)} BTC`} accent="#f59e0b" />
-          <Foot label="PROGRESS"  value={fmtPct(goalPct)} center />
-          <Foot label="GOAL"      value={`${fmtBtc(settings.goalBtc, 4)} BTC`} right />
+        <div className="grid grid-cols-3 gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <div>
+            <span className="label-xs">REMAINING</span>
+            <p className="font-mono text-[13px] font-bold mt-1" style={{ color: '#f59e0b', letterSpacing: '-0.02em' }}>
+              {fmtBtc(remaining, 4)} BTC
+            </p>
+          </div>
+          <div className="text-center">
+            <span className="label-xs">PROGRESS</span>
+            <p className="font-mono text-[13px] font-bold mt-1" style={{ color: 'var(--text)' }}>
+              {fmtPct(goalPct)}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="label-xs">GOAL</span>
+            <p className="font-mono text-[13px] font-bold mt-1" style={{ color: 'var(--text)' }}>
+              {fmtBtc(settings.goalBtc, 4)} BTC
+            </p>
+          </div>
         </div>
-      </Card>
 
-      {/* ── Stats Grid ─────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-2">
-        <StatCard label="Avg Cost"    value={fmtUsdCompact(m.avgCost)}  hint="per BTC" />
-        <StatCard label="Capital"     value={fmtUsdCompact(m.totalInv)} hint="deployed" />
-        <StatCard label="BTC Stacked" value={fmtBtc(m.totalBtc, 4)}    hint="total" />
+        {/* Secondary metrics */}
+        <div
+          className="grid grid-cols-3 mt-3 rounded-[12px] overflow-hidden"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <SecMetric label="AVG COST"       value={fmtUsdCompact(m.avgCost)}  hint="per BTC"  noBorder />
+          <SecMetric label="CURRENT PRICE"  value={fmtUsdCompact(m.price)}    hint="live" />
+          <SecMetric
+            label="UNREALIZED PNL"
+            value={`${unrealPos ? '+' : ''}${fmtUsdCompact(unrealPnlUsd)}`}
+            hint={`${unrealPos ? '+' : ''}${fmtPct(unrealPnlPct)}`}
+            valueColor={unrealPos ? '#22c55e' : '#ef4444'}
+            hintColor={unrealPos ? '#22c55e' : '#ef4444'}
+          />
+        </div>
       </div>
 
-      {/* ── Cash Flow → BTC ────────────────────────── */}
-      <Card>
-        <CardHead
-          title="Cash Flow → BTC"
-          right={<span className="label-xs">ALL TIME</span>}
-        />
-        <div className="flex flex-col gap-3">
-          <FlowRow
-            icon="↗" iconBg="rgba(34,197,94,0.12)" iconColor="#22c55e"
-            label="Futures PnL"  cash={m.futPnl}  btc={m.futsToBtc}
-          />
-          <FlowRow
-            icon="⊞" iconBg="rgba(167,139,250,0.12)" iconColor="#a78bfa"
-            label="Grid Bot PnL" cash={m.gridPnl} btc={m.gridToBtc}
-          />
+      {/* ── 2) PORTFOLIO VALUE CHART ──────────────── */}
+      <PortfolioChart
+        dca={state.dca}
+        dip={state.dip}
+        price={m.price}
+        usdthb={m.usdthb}
+        totalBtc={m.totalBtc}
+      />
+
+      {/* ── 3) PORTFOLIO BREAKDOWN ───────────────── */}
+      <PortfolioBreakdown
+        dcaBtc={m.dcaBtc}
+        dipBtc={m.dipBtc}
+        price={m.price}
+        usdthb={m.usdthb}
+      />
+
+      {/* ── 4) THIS MONTH ────────────────────────── */}
+      <div
+        className="rounded-[16px] p-[18px]"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+      >
+        <p className="label-xs mb-3">THIS MONTH</p>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <MonthCell value={`${m.moBtc >= 0 ? '+' : ''}${fmtBtc(m.moBtc, 4)}`} label="BTC ACCUM." color="#22c55e" />
+          <MonthCell value={String(m.moCount)} label="ENTRIES" />
+          <MonthCell value={fmtUsdCompact(m.moInv)} label="CAPITAL" />
         </div>
-        <div className="flex justify-between items-center mt-3 pt-3"
-             style={{ borderTop: '1px solid var(--border)' }}>
+      </div>
+
+      {/* ── 5) CASH FLOW → BTC ───────────────────── */}
+      <Card>
+        <CardHead title="Cash Flow → BTC" right={<span className="label-xs">ALL TIME</span>} />
+        <div className="flex flex-col gap-3">
+          <FlowRow icon="↗" iconBg="rgba(34,197,94,0.12)"    iconColor="#22c55e" label="Futures PnL"  cash={m.futPnl}  btc={m.futsToBtc} />
+          <FlowRow icon="⊞" iconBg="rgba(167,139,250,0.12)" iconColor="#a78bfa" label="Grid Bot PnL" cash={m.gridPnl} btc={m.gridToBtc} />
+        </div>
+        <div className="flex justify-between items-center mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
           <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Total converted</span>
-          <span
-            className="font-mono text-[15px] font-bold"
-            style={{ color: m.totalConverted >= 0 ? '#22c55e' : '#ef4444' }}
-          >
+          <span className="font-mono text-[15px] font-bold"
+                style={{ color: m.totalConverted >= 0 ? '#22c55e' : '#ef4444' }}>
             {m.totalConverted >= 0 ? '+' : ''}{fmtBtc(m.totalConverted, 4)} BTC
           </span>
         </div>
       </Card>
 
-      {/* ── This Month ─────────────────────────────── */}
-      <Card>
-        <CardHead title="This Month" />
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <MonthCell value={`${m.moBtc >= 0 ? '+' : ''}${fmtBtc(m.moBtc, 4)}`}
-                     label="BTC ACCUM." color="#22c55e" />
-          <MonthCell value={String(m.moCount)} label="ENTRIES" />
-          <MonthCell value={fmtUsdCompact(m.moInv)} label="CAPITAL" />
-        </div>
-      </Card>
-
-      {/* ── Recent Activity ────────────────────────── */}
+      {/* ── 6) RECENT ACTIVITY ───────────────────── */}
       <Card>
         <CardHead title="Recent Activity" />
         <div className="[&>*:last-child]:border-b-0">
@@ -144,14 +178,34 @@ export function HomePage({ state, onEditGoal }) {
 }
 
 /* ── Sub-components ── */
-function Foot({ label, value, accent, center, right }) {
+
+function SecMetric({ label, value, hint, valueColor, hintColor, noBorder }) {
   return (
-    <div className={center ? 'text-center' : right ? 'text-right' : ''}>
-      <span className="label-xs">{label}</span>
-      <p className="font-mono text-[14px] font-bold mt-1"
-         style={{ color: accent || 'var(--text)', letterSpacing: '-0.02em' }}>
+    <div
+      className="flex flex-col items-center justify-center py-3 px-2 text-center"
+      style={!noBorder ? { borderLeft: '1px solid var(--border)' } : {}}
+    >
+      <span className="label-xs mb-1">{label}</span>
+      <p className="font-mono text-[12px] font-bold leading-tight"
+         style={{ color: valueColor || 'var(--text)', letterSpacing: '-0.02em' }}>
         {value}
       </p>
+      {hint && (
+        <p className="font-mono text-[10px] mt-0.5" style={{ color: hintColor || 'var(--muted)' }}>
+          {hint}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function MonthCell({ value, label, color }) {
+  return (
+    <div>
+      <p className="font-mono text-[19px] font-bold tracking-tight" style={{ color: color || 'var(--text)' }}>
+        {value}
+      </p>
+      <span className="label-xs mt-1">{label}</span>
     </div>
   )
 }
@@ -165,8 +219,7 @@ function FlowRow({ icon, iconBg, iconColor, label, cash, btc }) {
       </div>
       <div>
         <p className="text-[12px]" style={{ color: 'var(--muted)' }}>{label}</p>
-        <p className="font-mono text-[13px] font-bold"
-           style={{ color: cash >= 0 ? '#22c55e' : '#ef4444' }}>
+        <p className="font-mono text-[13px] font-bold" style={{ color: cash >= 0 ? '#22c55e' : '#ef4444' }}>
           {$$(cash)}
         </p>
       </div>
@@ -175,18 +228,6 @@ function FlowRow({ icon, iconBg, iconColor, label, cash, btc }) {
             style={{ color: btc >= 0 ? '#22c55e' : '#ef4444', minWidth: 80 }}>
         {btc >= 0 ? '+' : ''}{fmtBtc(btc, 4)} BTC
       </span>
-    </div>
-  )
-}
-
-function MonthCell({ value, label, color }) {
-  return (
-    <div>
-      <p className="font-mono text-[19px] font-bold tracking-tight"
-         style={{ color: color || 'var(--text)' }}>
-        {value}
-      </p>
-      <span className="label-xs mt-1">{label}</span>
     </div>
   )
 }
