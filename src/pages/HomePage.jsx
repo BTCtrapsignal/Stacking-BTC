@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { Card, CardHead }        from '../components/shared/Card'
 import { EntryRow }              from '../components/shared/EntryRow'
 import { ProgressBar }           from '../components/shared/ProgressBar'
-import { PortfolioChart }        from '../components/home/PortfolioChart'
 import { PortfolioBreakdown }    from '../components/home/PortfolioBreakdown'
 import { computeMetrics }        from '../utils/metrics'
 import {
@@ -119,15 +118,6 @@ export function HomePage({ state, onEditGoal }) {
           />
         </div>
       </div>
-
-      {/* ── 2) PORTFOLIO VALUE CHART ──────────────── */}
-      <PortfolioChart
-        dca={state.dca}
-        dip={state.dip}
-        price={m.price}
-        usdthb={m.usdthb}
-        totalBtc={m.totalBtc}
-      />
 
       {/* ── 3) PORTFOLIO BREAKDOWN ───────────────── */}
       <PortfolioBreakdown
