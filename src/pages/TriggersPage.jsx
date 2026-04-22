@@ -8,7 +8,7 @@
  * - Dip Calculator: user enters budget → auto-calc per layer
  */
 import { useState, useMemo, useCallback } from 'react'
-import { Card, CardHead }               from '../components/shared/Card'
+import { Card } from '../components/shared/Card'
 import { computeMetrics, calcDipLayers, validateDipLayers } from '../utils/metrics'
 import { fmtBtc, fmtUsdCompact, fmtThbCompact, fmtUsd, fmtThb, fmtPct } from '../utils/format'
 
@@ -93,13 +93,13 @@ export function TriggersPage({ state }) {
       </Card>
 
       {/* ══════════════════════════════════════════════
-          BUY THE DIP — 4 LAYER STRATEGY
+          BUY THE DIP — 4 LAYER STRATEGY + CALCULATOR
       ══════════════════════════════════════════════ */}
       <div
         className="rounded-[16px] p-[18px]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
-        {/* Section header */}
+        {/* Section title — always visible */}
         <div className="mb-4">
           <h2 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>
             Buy the Dip —{' '}
@@ -118,22 +118,20 @@ export function TriggersPage({ state }) {
           </p>
         </div>
 
-        {/* Layer cards */}
-        <div className="flex flex-col gap-2.5">
+        {/* Layer cards — always visible, show live data when budget entered */}
+        <div className="flex flex-col gap-2.5 mb-4">
           {LAYERS_DEF.map(layer => {
             const bs       = BADGE_STYLE[layer.level]
             const ca       = CARD_ACCENT[layer.level]
             const buyPrice = refPrice * (1 + layer.dropPct / 100)
             const isPanic  = layer.fundSource === 'Panic'
             const calcRow  = calcResults.find(r => r.level === layer.level)
-
             return (
               <div
                 key={layer.level}
                 className="rounded-[12px] p-3.5"
                 style={{ background: ca.bg, border: `1px solid ${ca.border}` }}
               >
-                {/* Row 1: badge + description */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span
@@ -153,48 +151,33 @@ export function TriggersPage({ state }) {
                   </div>
                   <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{layer.notes}</span>
                 </div>
-
-                {/* Row 2: 2×2 stats grid */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <TrigStat label="BUY PRICE" value={fmtUsdCompact(buyPrice)} color={bs.color} />
                   <TrigStat label="DROP"      value={`${layer.dropPct}%`}     color="#ef4444" />
-                  {calcRow ? (
-                    <>
-                      <TrigStat label="DEPLOY (THB)" value={fmtThbCompact(calcRow.thbAmount)} />
-                      <TrigStat label="EST. BTC"     value={fmtBtc(calcRow.btcEst, 5)} color="#22c55e" />
-                    </>
-                  ) : (
-                    <>
-                      <TrigStat label="DEPLOY (THB)" value="—" />
-                      <TrigStat label="EST. BTC"     value="—" />
-                    </>
-                  )}
+                  <TrigStat label="DEPLOY (THB)"
+                             value={calcRow ? fmtThbCompact(calcRow.thbAmount) : '—'} />
+                  <TrigStat label="EST. BTC"
+                             value={calcRow ? fmtBtc(calcRow.btcEst, 5) : '—'}
+                             color={calcRow ? '#22c55e' : undefined} />
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
 
-      {/* ══════════════════════════════════════════════
-          DIP CALCULATOR
-      ══════════════════════════════════════════════ */}
-      <div
-        className="rounded-[16px] p-[18px]"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-      >
-        {/* Toggle header */}
+        {/* Calculator toggle */}
         <button
           onClick={() => setShowCalc(v => !v)}
-          className="w-full flex items-center justify-between"
+          className="w-full flex items-center justify-between py-2"
+          style={{ borderTop: '1px solid var(--border)' }}
         >
-          <div className="text-left">
-            <h3 className="text-[15px] font-bold" style={{ color: 'var(--text)' }}>Dip Calculator</h3>
-            <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>
-              Enter your budget → auto-calculate per layer
+          <div className="text-left pt-2">
+            <h3 className="text-[13px] font-bold" style={{ color: 'var(--text)' }}>Budget Calculator</h3>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
+              Enter budget → auto-fill DEPLOY & EST. BTC above
             </p>
           </div>
-          <span className="text-[22px] leading-none ml-3" style={{ color: 'var(--muted)' }}>
+          <span className="text-[22px] leading-none ml-3 pt-2" style={{ color: 'var(--muted)' }}>
             {showCalc ? '−' : '+'}
           </span>
         </button>
@@ -372,63 +355,7 @@ export function TriggersPage({ state }) {
         )}
       </div>
 
-      {/* ── Saved Triggers from data ─────────────────── */}
-      {state.triggers?.length > 0 && (
-        <Card>
-          <CardHead
-            title="Saved Triggers"
-            right={
-              <div className="flex items-center gap-1.5">
-                <span className="label-xs" style={{ color: 'var(--muted)' }}>REF</span>
-                <span className="font-mono text-[12px] font-semibold" style={{ color: 'var(--text2)' }}>
-                  {fmtUsdCompact(refPrice)}
-                </span>
-              </div>
-            }
-          />
-          <div className="flex flex-col gap-2">
-            {state.triggers.map(t => {
-              const level    = t.level || 'L1'
-              const bs       = BADGE_STYLE[level] || BADGE_STYLE.L1
-              const ca       = CARD_ACCENT[level] || CARD_ACCENT.L1
-              const buyPrice = t.buyPrice ?? (refPrice * (1 + (t.drop ?? 0)))
-              const btcEst   = t.btcEst ?? (t.thbBudget > 0 && buyPrice > 0 ? (t.thbBudget / m.usdthb) / buyPrice : 0)
-              const fired    = refPrice > 0 && refPrice <= buyPrice * 1.03
 
-              return (
-                <div
-                  key={level}
-                  className="rounded-[12px] p-3.5"
-                  style={{
-                    background: fired ? 'rgba(34,197,94,0.06)' : ca.bg,
-                    border: `1px solid ${fired ? 'rgba(34,197,94,0.25)' : ca.border}`,
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-chip"
-                          style={{ background: bs.bg, color: bs.color, border: `1px solid ${bs.border}` }}>
-                      {level} · {t.fundSource}
-                    </span>
-                    <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{t.notes}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <TrigStat label="BUY PRICE"   value={fmtUsdCompact(buyPrice)}
-                              color={fired ? '#22c55e' : bs.color} />
-                    <TrigStat label="DROP"        value={fmtPct((t.drop ?? 0) * 100, 0)} color="#ef4444" />
-                    <TrigStat label="DEPLOY (THB)" value={fmtThbCompact(t.thbBudget ?? t.thbUse ?? 0)} />
-                    <TrigStat label="EST. BTC"    value={fmtBtc(btcEst, 4)} color="#22c55e" />
-                  </div>
-                  {fired && (
-                    <p className="mt-2 text-[11px] font-bold" style={{ color: '#22c55e' }}>
-                      ⚡ Within range — consider deploying
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
     </>
   )
 }
