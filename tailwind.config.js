@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -8,30 +9,32 @@ export default {
         mono: ['Space Mono', 'Courier New', 'monospace'],
       },
       colors: {
-        // Dark theme base
-        bg:      '#0b0c0e',
-        surface: '#141619',
-        card:    '#1c1f28',
-        border:  '#252830',
-        // Text
-        primary:   '#eceef3',
-        secondary: '#b8bcc8',
-        muted:     '#686e7d',
-        // Brand
+        /* ── Light theme ── */
+        'l-bg':      '#f4f3ef',
+        'l-surface': '#eceae4',
+        'l-card':    '#ffffff',
+        'l-border':  '#e2dfd7',
+        'l-text':    '#0d0d0b',
+        'l-text2':   '#3a3930',
+        'l-muted':   '#8c8980',
+
+        /* ── Dark theme ── */
+        'd-bg':      '#0b0c0e',
+        'd-surface': '#141619',
+        'd-card':    '#1c1f28',
+        'd-border':  '#252830',
+        'd-text':    '#eceef3',
+        'd-text2':   '#b8bcc8',
+        'd-muted':   '#686e7d',
+
+        /* ── Brand (same both modes) ── */
         btc:    '#f7931a',
         green:  '#22c55e',
         red:    '#ef4444',
-        yellow: '#facc15',  // WARNING: never change — used for highlighted text
+        yellow: '#facc15',
         orange: '#f59e0b',
         blue:   '#60a5fa',
         purple: '#a78bfa',
-        // Soft variants
-        'green-soft':  'rgba(34,197,94,0.12)',
-        'red-soft':    'rgba(239,68,68,0.12)',
-        'btc-soft':    'rgba(247,147,26,0.12)',
-        'yellow-soft': 'rgba(250,204,21,0.15)',
-        'blue-soft':   'rgba(96,165,250,0.12)',
-        'orange-soft': 'rgba(245,158,11,0.12)',
       },
       borderRadius: {
         card: '16px',
