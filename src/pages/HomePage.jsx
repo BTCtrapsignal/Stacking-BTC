@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Card, CardHead }        from '../components/shared/Card'
 import { EntryRow }              from '../components/shared/EntryRow'
 import { ProgressBar }           from '../components/shared/ProgressBar'
+import { PortfolioChart }        from '../components/home/PortfolioChart'
 import { PortfolioBreakdown }    from '../components/home/PortfolioBreakdown'
 import { computeMetrics }        from '../utils/metrics'
 import {
@@ -18,14 +19,15 @@ export function HomePage({ state, onEditGoal }) {
   const m          = useMemo(() => computeMetrics(state), [state])
   const { settings } = state
 
-  const goalPct    = Math.min(100, (m.totalBtc / settings.goalBtc) * 100)
-  const heroUsd    = m.totalBtc * m.price
-  const heroThb    = heroUsd * m.usdthb
-  const remaining  = Math.max(0, settings.goalBtc - m.totalBtc)
+  const goalPct   = settings.goalBtc > 0
+    ? Math.min(100, (m.totalBtc / settings.goalBtc) * 100)
+    : 0
+  const heroUsd   = m.totalBtc * m.price
+  const heroThb   = heroUsd * m.usdthb
+  const remaining = Math.max(0, settings.goalBtc - m.totalBtc)
 
-  const unrealPnlUsd = heroUsd - m.totalInv
-  const unrealPnlPct = m.totalInv > 0 ? (unrealPnlUsd / m.totalInv) * 100 : 0
-  const unrealPos    = unrealPnlUsd >= 0
+  // Unrealized PnL — from computeMetrics (already correct)
+  const unrealPos = m.unrealPnlUsd >= 0
 
   const recentRows = useMemo(() => [
     ...state.dca.slice(0, 3).map(x => ({
@@ -52,6 +54,7 @@ export function HomePage({ state, onEditGoal }) {
         className="rounded-[20px] p-5"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
+        {/* Label + Edit */}
         <div className="flex items-start justify-between mb-1">
           <span className="label-xs">TOTAL BTC HOLDINGS</span>
           <button
@@ -63,6 +66,7 @@ export function HomePage({ state, onEditGoal }) {
           </button>
         </div>
 
+        {/* Big BTC number */}
         <div className="flex items-baseline gap-2 mt-1 mb-1">
           <span
             className="font-mono font-bold leading-none"
@@ -75,23 +79,27 @@ export function HomePage({ state, onEditGoal }) {
           </span>
         </div>
 
+        {/* USD + THB same row */}
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--muted)' }}>
           ≈ {fmtUsdCompact(heroUsd)}&nbsp;·&nbsp;{fmtThbCompact(heroThb)}
         </p>
 
+        {/* Progress bar */}
         <ProgressBar pct={goalPct} color="default" />
 
+        {/* Progress footer: Remaining | Progress % | Goal */}
         <div className="grid grid-cols-3 gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div>
             <span className="label-xs">REMAINING</span>
-            <p className="font-mono text-[13px] font-bold mt-1" style={{ color: '#f59e0b', letterSpacing: '-0.02em' }}>
+            <p className="font-mono text-[13px] font-bold mt-1"
+               style={{ color: '#f59e0b', letterSpacing: '-0.02em' }}>
               {fmtBtc(remaining, 4)} BTC
             </p>
           </div>
           <div className="text-center">
             <span className="label-xs">PROGRESS</span>
             <p className="font-mono text-[13px] font-bold mt-1" style={{ color: 'var(--text)' }}>
-              {fmtPct(goalPct)}
+              {fmtPct(goalPct, 1)}
             </p>
           </div>
           <div className="text-right">
@@ -102,22 +110,40 @@ export function HomePage({ state, onEditGoal }) {
           </div>
         </div>
 
-        {/* Secondary metrics */}
+        {/* Avg Cost | Current Price | Unrealized PnL */}
         <div
           className="grid grid-cols-3 mt-3 rounded-[12px] overflow-hidden"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <SecMetric label="AVG COST"       value={fmtUsdCompact(m.avgCost)}  hint="per BTC"  noBorder />
-          <SecMetric label="CURRENT PRICE"  value={fmtUsdCompact(m.price)}    hint="live" />
+          <SecMetric
+            label="AVG COST"
+            value={fmtUsdCompact(m.avgCost)}
+            hint="per BTC"
+            noBorder
+          />
+          <SecMetric
+            label="CURRENT PRICE"
+            value={fmtUsdCompact(m.price)}
+            hint="live"
+          />
           <SecMetric
             label="UNREALIZED PNL"
-            value={`${unrealPos ? '+' : ''}${fmtUsdCompact(unrealPnlUsd)}`}
-            hint={`${unrealPos ? '+' : ''}${fmtPct(unrealPnlPct)}`}
+            value={`${unrealPos ? '+' : ''}${fmtUsdCompact(m.unrealPnlUsd)}`}
+            hint={`${unrealPos ? '+' : ''}${fmtPct(m.unrealPnlPct, 1)}`}
             valueColor={unrealPos ? '#22c55e' : '#ef4444'}
-            hintColor={unrealPos ? '#22c55e' : '#ef4444'}
+            hintColor={unrealPos  ? '#22c55e' : '#ef4444'}
           />
         </div>
       </div>
+
+      {/* ── 2) PORTFOLIO VALUE CHART ──────────────── */}
+      <PortfolioChart
+        dca={state.dca}
+        dip={state.dip}
+        price={m.price}
+        usdthb={m.usdthb}
+        totalBtc={m.totalBtc}
+      />
 
       {/* ── 3) PORTFOLIO BREAKDOWN ───────────────── */}
       <PortfolioBreakdown
@@ -134,7 +160,10 @@ export function HomePage({ state, onEditGoal }) {
       >
         <p className="label-xs mb-3">THIS MONTH</p>
         <div className="grid grid-cols-3 gap-3 text-center">
-          <MonthCell value={`${m.moBtc >= 0 ? '+' : ''}${fmtBtc(m.moBtc, 4)}`} label="BTC ACCUM." color="#22c55e" />
+          <MonthCell
+            value={`${m.moBtc >= 0 ? '+' : ''}${fmtBtc(m.moBtc, 4)}`}
+            label="BTC ACCUM." color="#22c55e"
+          />
           <MonthCell value={String(m.moCount)} label="ENTRIES" />
           <MonthCell value={fmtUsdCompact(m.moInv)} label="CAPITAL" />
         </div>
@@ -144,10 +173,17 @@ export function HomePage({ state, onEditGoal }) {
       <Card>
         <CardHead title="Cash Flow → BTC" right={<span className="label-xs">ALL TIME</span>} />
         <div className="flex flex-col gap-3">
-          <FlowRow icon="↗" iconBg="rgba(34,197,94,0.12)"    iconColor="#22c55e" label="Futures PnL"  cash={m.futPnl}  btc={m.futsToBtc} />
-          <FlowRow icon="⊞" iconBg="rgba(167,139,250,0.12)" iconColor="#a78bfa" label="Grid Bot PnL" cash={m.gridPnl} btc={m.gridToBtc} />
+          <FlowRow
+            icon="↗" iconBg="rgba(34,197,94,0.12)" iconColor="#22c55e"
+            label="Futures PnL" cash={m.futPnl} btc={m.futsToBtc}
+          />
+          <FlowRow
+            icon="⊞" iconBg="rgba(167,139,250,0.12)" iconColor="#a78bfa"
+            label="Grid Bot PnL" cash={m.gridPnl} btc={m.gridToBtc}
+          />
         </div>
-        <div className="flex justify-between items-center mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex justify-between items-center mt-3 pt-3"
+             style={{ borderTop: '1px solid var(--border)' }}>
           <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Total converted</span>
           <span className="font-mono text-[15px] font-bold"
                 style={{ color: m.totalConverted >= 0 ? '#22c55e' : '#ef4444' }}>
@@ -192,7 +228,8 @@ function SecMetric({ label, value, hint, valueColor, hintColor, noBorder }) {
 function MonthCell({ value, label, color }) {
   return (
     <div>
-      <p className="font-mono text-[19px] font-bold tracking-tight" style={{ color: color || 'var(--text)' }}>
+      <p className="font-mono text-[19px] font-bold tracking-tight"
+         style={{ color: color || 'var(--text)' }}>
         {value}
       </p>
       <span className="label-xs mt-1">{label}</span>
@@ -209,7 +246,8 @@ function FlowRow({ icon, iconBg, iconColor, label, cash, btc }) {
       </div>
       <div>
         <p className="text-[12px]" style={{ color: 'var(--muted)' }}>{label}</p>
-        <p className="font-mono text-[13px] font-bold" style={{ color: cash >= 0 ? '#22c55e' : '#ef4444' }}>
+        <p className="font-mono text-[13px] font-bold"
+           style={{ color: cash >= 0 ? '#22c55e' : '#ef4444' }}>
           {$$(cash)}
         </p>
       </div>
