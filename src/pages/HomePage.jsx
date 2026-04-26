@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { Card, CardHead }        from '../components/shared/Card'
 import { EntryRow }              from '../components/shared/EntryRow'
 import { ProgressBar }           from '../components/shared/ProgressBar'
-import { PortfolioChart }        from '../components/home/PortfolioChart'
 import { PortfolioBreakdown }    from '../components/home/PortfolioBreakdown'
 import { computeMetrics }        from '../utils/metrics'
 import {
@@ -129,21 +128,13 @@ export function HomePage({ state, onEditGoal }) {
           <SecMetric
             label="UNREALIZED PNL"
             value={`${unrealPos ? '+' : ''}${fmtUsdCompact(m.unrealPnlUsd)}`}
+            valueSuffix={` (≈ ${fmtThbCompact(m.unrealPnlUsd * m.usdthb)})`}
             hint={`${unrealPos ? '+' : ''}${fmtPct(m.unrealPnlPct, 1)}`}
             valueColor={unrealPos ? '#22c55e' : '#ef4444'}
             hintColor={unrealPos  ? '#22c55e' : '#ef4444'}
           />
         </div>
       </div>
-
-      {/* ── 2) PORTFOLIO VALUE CHART ──────────────── */}
-      <PortfolioChart
-        dca={state.dca}
-        dip={state.dip}
-        price={m.price}
-        usdthb={m.usdthb}
-        totalBtc={m.totalBtc}
-      />
 
       {/* ── 3) PORTFOLIO BREAKDOWN ───────────────── */}
       <PortfolioBreakdown
@@ -205,7 +196,7 @@ export function HomePage({ state, onEditGoal }) {
 
 /* ── Sub-components ── */
 
-function SecMetric({ label, value, hint, valueColor, hintColor, noBorder }) {
+function SecMetric({ label, value, valueSuffix, hint, valueColor, hintColor, noBorder }) {
   return (
     <div
       className="flex flex-col items-center justify-center py-3 px-2 text-center"
@@ -215,6 +206,11 @@ function SecMetric({ label, value, hint, valueColor, hintColor, noBorder }) {
       <p className="font-mono text-[12px] font-bold leading-tight"
          style={{ color: valueColor || 'var(--text)', letterSpacing: '-0.02em' }}>
         {value}
+        {valueSuffix && (
+          <span className="font-mono text-[10px] font-normal" style={{ opacity: 0.55 }}>
+            {valueSuffix}
+          </span>
+        )}
       </p>
       {hint && (
         <p className="font-mono text-[10px] mt-0.5" style={{ color: hintColor || 'var(--muted)' }}>

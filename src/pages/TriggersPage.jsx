@@ -93,91 +93,24 @@ export function TriggersPage({ state }) {
       </Card>
 
       {/* ══════════════════════════════════════════════
-          BUY THE DIP — 4 LAYER STRATEGY + CALCULATOR
+          DIP BUDGET CALCULATOR
       ══════════════════════════════════════════════ */}
       <div
         className="rounded-[16px] p-[18px]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
-        {/* Section title — always visible */}
-        <div className="mb-4">
-          <h2 className="text-[16px] font-bold" style={{ color: 'var(--text)' }}>
-            Buy the Dip —{' '}
-            <span
-              className="font-bold px-1.5 py-0.5 rounded-[5px]"
-              style={{ background: 'rgba(250,204,21,0.18)', color: '#facc15' }}
-            >
-              4 Layer Strategy
-            </span>
-          </h2>
-          <p className="text-[12px] mt-1" style={{ color: 'var(--muted)' }}>
-            Ref:{' '}
-            <span className="font-mono font-semibold" style={{ color: 'var(--text2)' }}>
-              {fmtUsd(refPrice)}
-            </span>
-          </p>
-        </div>
-
-        {/* Layer cards — always visible, show live data when budget entered */}
-        <div className="flex flex-col gap-2.5 mb-4">
-          {LAYERS_DEF.map(layer => {
-            const bs       = BADGE_STYLE[layer.level]
-            const ca       = CARD_ACCENT[layer.level]
-            const buyPrice = refPrice * (1 + layer.dropPct / 100)
-            const isPanic  = layer.fundSource === 'Panic'
-            const calcRow  = calcResults.find(r => r.level === layer.level)
-            return (
-              <div
-                key={layer.level}
-                className="rounded-[12px] p-3.5"
-                style={{ background: ca.bg, border: `1px solid ${ca.border}` }}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-[11px] font-bold px-2.5 py-1 rounded-chip"
-                      style={{ background: bs.bg, color: bs.color, border: `1px solid ${bs.border}` }}
-                    >
-                      {layer.level} · {layer.fundSource}
-                    </span>
-                    {isPanic && (
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
-                        style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}
-                      >
-                        PANIC
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{layer.notes}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  <TrigStat label="BUY PRICE" value={fmtUsdCompact(buyPrice)} color={bs.color} />
-                  <TrigStat label="DROP"      value={`${layer.dropPct}%`}     color="#ef4444" />
-                  <TrigStat label="DEPLOY (THB)"
-                             value={calcRow ? fmtThbCompact(calcRow.thbAmount) : '—'} />
-                  <TrigStat label="EST. BTC"
-                             value={calcRow ? fmtBtc(calcRow.btcEst, 5) : '—'}
-                             color={calcRow ? '#22c55e' : undefined} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
         {/* Calculator toggle */}
         <button
           onClick={() => setShowCalc(v => !v)}
-          className="w-full flex items-center justify-between py-2"
-          style={{ borderTop: '1px solid var(--border)' }}
+          className="w-full flex items-center justify-between"
         >
-          <div className="text-left pt-2">
-            <h3 className="text-[13px] font-bold" style={{ color: 'var(--text)' }}>Budget Calculator</h3>
+          <div className="text-left">
+            <h3 className="text-[15px] font-bold" style={{ color: 'var(--text)' }}>Budget Calculator</h3>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
-              Enter budget → auto-fill DEPLOY & EST. BTC above
+              Enter budget → auto-calculate per layer
             </p>
           </div>
-          <span className="text-[22px] leading-none ml-3 pt-2" style={{ color: 'var(--muted)' }}>
+          <span className="text-[22px] leading-none ml-3" style={{ color: 'var(--muted)' }}>
             {showCalc ? '−' : '+'}
           </span>
         </button>
