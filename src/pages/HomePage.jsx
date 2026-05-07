@@ -18,15 +18,22 @@ export function HomePage({ state, onEditGoal }) {
   const m          = useMemo(() => computeMetrics(state), [state])
   const { settings } = state
 
-  const goalPct   = settings.goalBtc > 0
+  const goalPct    = settings.goalBtc > 0
     ? Math.min(100, (m.totalBtc / settings.goalBtc) * 100)
     : 0
-  const heroUsd   = m.totalBtc * m.price
-  const heroThb   = heroUsd * m.usdthb
-  const remaining = Math.max(0, settings.goalBtc - m.totalBtc)
+  const remaining  = Math.max(0, settings.goalBtc - m.totalBtc)
 
-  // Unrealized PnL — from computeMetrics (already correct)
-  const unrealPos = m.unrealPnlUsd >= 0
+  // Current market value of holdings
+  const currentValueUsd = m.totalBtc * m.price
+  const currentValueThb = currentValueUsd * m.usdthb
+
+  // Unrealized PnL = current market value MINUS recorded purchase cost
+  // m.totalInv = sum of actual usdtAmount paid (cost basis from records)
+  const unrealPnlUsd = currentValueUsd - m.totalInv
+  const unrealPnlThb = unrealPnlUsd * m.usdthb
+  // PnL % relative to cost basis
+  const unrealPnlPct = m.totalInv > 0 ? (unrealPnlUsd / m.totalInv) * 100 : 0
+  const unrealPos    = unrealPnlUsd >= 0
 
   const recentRows = useMemo(() => [
     ...state.dca.slice(0, 3).map(x => ({
@@ -53,7 +60,7 @@ export function HomePage({ state, onEditGoal }) {
         className="rounded-[20px] p-5"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       >
-        {/* Label + Edit */}
+        {/* Label + Edit Goal */}
         <div className="flex items-start justify-between mb-1">
           <span className="label-xs">TOTAL BTC HOLDINGS</span>
           <button
@@ -78,15 +85,15 @@ export function HomePage({ state, onEditGoal }) {
           </span>
         </div>
 
-        {/* USD + THB same row */}
+        {/* Current market value (updates with live price) */}
         <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--muted)' }}>
-          ≈ {fmtUsdCompact(heroUsd)}&nbsp;·&nbsp;{fmtThbCompact(heroThb)}
+          ≈ {fmtUsdCompact(currentValueUsd)}&nbsp;·&nbsp;{fmtThbCompact(currentValueThb)}
         </p>
 
-        {/* Progress bar */}
+        {/* Progress bar toward goal */}
         <ProgressBar pct={goalPct} color="default" />
 
-        {/* Progress footer: Remaining | Progress % | Goal */}
+        {/* Remaining / Progress / Goal */}
         <div className="grid grid-cols-3 gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div>
             <span className="label-xs">REMAINING</span>
@@ -109,34 +116,37 @@ export function HomePage({ state, onEditGoal }) {
           </div>
         </div>
 
-        {/* Avg Cost | Current Price | Unrealized PnL */}
+        {/* AVG COST | CURRENT PRICE | UNREALIZED PNL */}
         <div
           className="grid grid-cols-3 mt-3 rounded-[12px] overflow-hidden"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
         >
+          {/* Avg cost = totalInv (recorded cost) / totalBtc */}
           <SecMetric
             label="AVG COST"
             value={fmtUsdCompact(m.avgCost)}
             hint="per BTC"
             noBorder
           />
+          {/* Live BTC market price */}
           <SecMetric
             label="CURRENT PRICE"
             value={fmtUsdCompact(m.price)}
             hint="live"
           />
+          {/* Unrealized PnL: currentValue - recordedCost */}
           <SecMetric
             label="UNREALIZED PNL"
-            value={`${unrealPos ? '+' : ''}${fmtUsdCompact(m.unrealPnlUsd)}`}
-            valueSuffix={` (≈ ${fmtThbCompact(m.unrealPnlUsd * m.usdthb)})`}
-            hint={`${unrealPos ? '+' : ''}${fmtPct(m.unrealPnlPct, 1)}`}
+            value={`${unrealPos ? '+' : ''}${fmtUsdCompact(unrealPnlUsd)}`}
+            thb={`${unrealPos ? '' : '-'}${fmtThbCompact(Math.abs(unrealPnlThb))}`}
+            hint={`${unrealPos ? '+' : ''}${fmtPct(unrealPnlPct, 1)}`}
             valueColor={unrealPos ? '#22c55e' : '#ef4444'}
             hintColor={unrealPos  ? '#22c55e' : '#ef4444'}
           />
         </div>
       </div>
 
-      {/* ── 3) PORTFOLIO BREAKDOWN ───────────────── */}
+      {/* ── 2) PORTFOLIO BREAKDOWN ───────────────── */}
       <PortfolioBreakdown
         dcaBtc={m.dcaBtc}
         dipBtc={m.dipBtc}
@@ -144,7 +154,7 @@ export function HomePage({ state, onEditGoal }) {
         usdthb={m.usdthb}
       />
 
-      {/* ── 4) THIS MONTH ────────────────────────── */}
+      {/* ── 3) THIS MONTH ────────────────────────── */}
       <div
         className="rounded-[16px] p-[18px]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
@@ -160,7 +170,7 @@ export function HomePage({ state, onEditGoal }) {
         </div>
       </div>
 
-      {/* ── 5) CASH FLOW → BTC ───────────────────── */}
+      {/* ── 4) CASH FLOW → BTC ───────────────────── */}
       <Card>
         <CardHead title="Cash Flow → BTC" right={<span className="label-xs">ALL TIME</span>} />
         <div className="flex flex-col gap-3">
@@ -183,7 +193,7 @@ export function HomePage({ state, onEditGoal }) {
         </div>
       </Card>
 
-      {/* ── 6) RECENT ACTIVITY ───────────────────── */}
+      {/* ── 5) RECENT ACTIVITY ───────────────────── */}
       <Card>
         <CardHead title="Recent Activity" />
         <div className="[&>*:last-child]:border-b-0">
@@ -196,24 +206,33 @@ export function HomePage({ state, onEditGoal }) {
 
 /* ── Sub-components ── */
 
-function SecMetric({ label, value, valueSuffix, hint, valueColor, hintColor, noBorder }) {
+/**
+ * SecMetric — metric tile inside the 3-column row.
+ * Supports optional `thb` prop for THB equivalent on its own line.
+ */
+function SecMetric({ label, value, thb, hint, valueColor, hintColor, noBorder }) {
   return (
     <div
       className="flex flex-col items-center justify-center py-3 px-2 text-center"
       style={!noBorder ? { borderLeft: '1px solid var(--border)' } : {}}
     >
       <span className="label-xs mb-1">{label}</span>
+      {/* USD value */}
       <p className="font-mono text-[12px] font-bold leading-tight"
          style={{ color: valueColor || 'var(--text)', letterSpacing: '-0.02em' }}>
         {value}
-        {valueSuffix && (
-          <span className="font-mono text-[10px] font-normal" style={{ opacity: 0.55 }}>
-            {valueSuffix}
-          </span>
-        )}
       </p>
+      {/* THB equivalent — own line, muted */}
+      {thb && (
+        <p className="font-mono text-[10px] mt-0.5"
+           style={{ color: valueColor || 'var(--muted)', opacity: 0.55 }}>
+          {thb}
+        </p>
+      )}
+      {/* % hint */}
       {hint && (
-        <p className="font-mono text-[10px] mt-0.5" style={{ color: hintColor || 'var(--muted)' }}>
+        <p className="font-mono text-[10px] mt-0.5"
+           style={{ color: hintColor || 'var(--muted)' }}>
           {hint}
         </p>
       )}
