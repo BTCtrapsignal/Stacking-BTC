@@ -37,7 +37,12 @@ export default function App() {
   const [planForm, setPlanForm]   = useState({})
 
   /* price */
-  const onPriceUpdate = useCallback(p => updateSettings({ currentPrice: p }), [updateSettings])
+  const onPriceUpdate = useCallback(({ btcUsd, usdthb }) => {
+    const patch = {}
+    if (btcUsd > 0) patch.currentPrice = btcUsd
+    if (usdthb > 0) patch.usdthb       = usdthb
+    if (Object.keys(patch).length > 0) updateSettings(patch)
+  }, [updateSettings])
   const { loading: priceLoading, updatedAt, refresh: refreshPrice } = usePrice(onPriceUpdate)
 
   /* entry save */
