@@ -15,8 +15,12 @@ export function AppHeader({ settings, pageTitle, onAdd, isDark, onToggleTheme })
 
   return (
     <header
-      style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}
-      className="sticky top-0 z-50 px-4 pt-3 pb-3 flex items-center justify-between gap-3"
+      style={{
+        background: 'var(--bg)',
+        borderBottom: '1px solid var(--border)',
+        paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)',
+      }}
+      className="sticky top-0 z-50 px-4 pb-3 flex items-center justify-between gap-3"
     >
       {/* ── LEFT: date + title ── */}
       <div className="flex flex-col min-w-0">
