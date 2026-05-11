@@ -93,7 +93,7 @@ export default function App() {
 
       {/* ── Page content ── */}
       <PageContainer>
-        {tab === 'home'     && <HomePage     state={state} onEditGoal={openGoal} />}
+        {tab === 'home'     && <HomePage     state={state} onEditGoal={openGoal} onRefresh={refreshPrice} />}
         {tab === 'dca'      && <DcaPage      state={state} onEditPlan={openPlan} />}
         {tab === 'futures'  && <FuturesPage  state={state} />}
         {tab === 'triggers' && <TriggersPage state={state} />}
@@ -111,7 +111,7 @@ export default function App() {
       <BottomNav active={tab} onChange={setTab} />
 
       {/* ── Sheets ── */}
-      <AddEntrySheet open={addOpen} onClose={() => setAddOpen(false)} onSave={handleSave} />
+      <AddEntrySheet open={addOpen} onClose={() => setAddOpen(false)} onSave={handleSave} settings={state.settings} />
 
       <Sheet open={goalOpen} title="Edit Goal" onClose={() => setGoalOpen(false)}>
         <form onSubmit={saveGoal} className="flex flex-col gap-3">
