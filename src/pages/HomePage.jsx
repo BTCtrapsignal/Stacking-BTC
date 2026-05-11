@@ -85,9 +85,13 @@ export function HomePage({ state, onEditGoal }) {
           </span>
         </div>
 
-        {/* Current market value (updates with live price) */}
-        <p className="font-mono text-[13px] mb-4" style={{ color: 'var(--muted)' }}>
-          ≈ {fmtUsdCompact(currentValueUsd)}&nbsp;·&nbsp;{fmtThbCompact(currentValueThb)}
+        {/* Invested cost (recorded purchase cost — does NOT change with price) */}
+        <p className="font-mono text-[13px] mb-1" style={{ color: 'var(--muted)' }}>
+          Invested {fmtUsdCompact(m.totalInv)}&nbsp;·&nbsp;{fmtThbCompact(m.totalInv * m.usdthb)}
+        </p>
+        {/* Current market value (live, updates with price) */}
+        <p className="font-mono text-[11px] mb-4" style={{ color: 'var(--muted)', opacity: 0.65 }}>
+          Value now {fmtUsdCompact(currentValueUsd)}&nbsp;·&nbsp;{fmtThbCompact(currentValueThb)}
         </p>
 
         {/* Progress bar toward goal */}
@@ -138,7 +142,7 @@ export function HomePage({ state, onEditGoal }) {
           <SecMetric
             label="UNREALIZED PNL"
             value={`${unrealPos ? '+' : ''}${fmtUsdCompact(unrealPnlUsd)}`}
-            thb={`${unrealPos ? '' : '-'}${fmtThbCompact(Math.abs(unrealPnlThb))}`}
+            thb={`${unrealPos ? '' : '-'}≈ ${fmtThbCompact(Math.abs(unrealPnlThb))}`}
             hint={`${unrealPos ? '+' : ''}${fmtPct(unrealPnlPct, 1)}`}
             valueColor={unrealPos ? '#22c55e' : '#ef4444'}
             hintColor={unrealPos  ? '#22c55e' : '#ef4444'}
