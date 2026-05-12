@@ -26,7 +26,7 @@ const PAGE_TITLES = {
 }
 
 export default function App() {
-  const { state, updateSettings, addEntry } = useAppState()
+  const { state, updateSettings, addEntry, restoreState } = useAppState()
   const { isDark, toggle: toggleTheme }     = useTheme()
 
   const [tab, setTab]             = useState('home')
@@ -108,6 +108,7 @@ export default function App() {
             priceLoading={priceLoading}
             updatedAt={updatedAt}
             onRefresh={refreshPrice}
+            onRestoreState={restoreState}
           />
         )}
       </PageContainer>
