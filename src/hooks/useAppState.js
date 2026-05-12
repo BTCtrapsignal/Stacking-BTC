@@ -52,5 +52,18 @@ export function useAppState() {
     setState(s => ({ ...s, triggers }))
   }, [])
 
-  return { state, updateSettings, addEntry, updateTriggers }
+  // Restore from JSON backup — replaces full state
+  const restoreState = useCallback((backup) => {
+    const arr = (v, fb) => Array.isArray(v) ? v : fb
+    setState({
+      settings: { ...DEFAULT_SETTINGS, ...(backup.settings || {}) },
+      dca:      arr(backup.dca,      []),
+      dip:      arr(backup.dip,      []),
+      futures:  arr(backup.futures,  []),
+      grid:     arr(backup.grid,     []),
+      triggers: arr(backup.triggers, []),
+    })
+  }, [])
+
+  return { state, updateSettings, addEntry, updateTriggers, restoreState }
 }
