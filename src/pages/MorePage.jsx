@@ -166,62 +166,6 @@ export function MorePage({ state, priceLoading, updatedAt, onRefresh, onRestoreS
         </div>
       </Card>
 
-      {/* ── Backup & Restore ── */}
-      <Card>
-        <CardHead
-          title="Backup & Restore"
-          right={<span className="label-xs">{totalEntries} entries</span>}
-        />
-        <p className="text-[12px] mb-3" style={{ color: 'var(--muted)' }}>
-          Export a full JSON backup of all your data. Import to restore on any device.
-        </p>
-
-        {/* Export JSON Backup — primary */}
-        <button
-          onClick={handleBackupExport}
-          className="w-full py-3 rounded-[12px] text-[14px] font-bold mb-2.5
-                     flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-          style={{ background: 'var(--text)', color: 'var(--card)' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export Backup JSON
-        </button>
-
-        {/* Import JSON Backup */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full py-3 rounded-[12px] text-[14px] font-semibold
-                     flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text2)' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Import Backup JSON
-        </button>
-
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
-        <p className="text-[11px] mt-2.5" style={{ color: 'var(--muted)' }}>
-          Backup file: <span className="font-mono">btc-stacking-backup-YYYY-MM-DD.json</span>
-        </p>
-      </Card>
-
       {/* ── Export CSV ── */}
       <Card>
         <CardHead
@@ -323,6 +267,59 @@ export function MorePage({ state, priceLoading, updatedAt, onRefresh, onRestoreS
             <p className="text-[13px] py-4 text-center" style={{ color: 'var(--muted)' }}>No grid bots yet.</p>
           )}
         </div>
+      </Card>
+
+      {/* ── Backup & Restore ── */}
+      <Card>
+        <CardHead
+          title="Backup & Restore"
+          right={<span className="label-xs">{totalEntries} entries</span>}
+        />
+        <p className="text-[12px] mb-3" style={{ color: 'var(--muted)' }}>
+          Export a full JSON backup of all your data. Import to restore on any device.
+        </p>
+
+        <button
+          onClick={handleBackupExport}
+          className="w-full py-3 rounded-[12px] text-[14px] font-bold mb-2.5
+                     flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+          style={{ background: 'var(--text)', color: 'var(--card)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export Backup JSON
+        </button>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full py-3 rounded-[12px] text-[14px] font-semibold
+                     flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text2)' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import Backup JSON
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        <p className="text-[11px] mt-2.5" style={{ color: 'var(--muted)' }}>
+          File: <span className="font-mono">btc-stacking-backup-YYYY-MM-DD.json</span>
+        </p>
       </Card>
 
       {/* ── Confirm Restore Dialog ── */}
