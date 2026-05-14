@@ -1,6 +1,7 @@
 /**
  * useAppState — central state hook.
- * Persists to localStorage. Initialises from seed data.
+ * Persists to localStorage with version migration.
+ * Protects real user data from being overwritten by seed defaults.
  */
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -8,36 +9,109 @@ import {
   FUTURES_ENTRIES, GRID_ENTRIES, TRIGGERS,
 } from '../data/seed'
 
-const STORAGE_KEY = 'btc-stack-v5'
+const STORAGE_KEY     = 'btc-stack-v5'
+const STORAGE_VERSION = 2
 
-function loadState() {
+/* ── Helpers ─────────────────────────────────────────── */
+
+const isArr = v => Array.isArray(v)
+
+/**
+ * Determine whether saved data contains real user entries
+ * (i.e. user has actually added/changed data, not just the seed).
+ * We check if any array differs in length from seed or settings differ.
+ */
+function hasRealUserData(saved) {
+  if (!saved) return false
+  // If any array has content (even 0 items the user deliberately cleared), keep it.
+  // We trust saved data as long as arrays are present as arrays.
+  return (
+    isArr(saved.dca)      ||
+    isArr(saved.dip)      ||
+    isArr(saved.futures)  ||
+    isArr(saved.grid)
+  )
+}
+
+/* ── Load & migrate ──────────────────────────────────── */
+
+function loadSaved() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
-  } catch {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) {
+      console.warn('[useAppState] Corrupt localStorage — resetting to default.')
+      return null
+    }
+    return parsed
+  } catch (e) {
+    console.warn('[useAppState] Failed to parse localStorage — resetting to default.', e)
     return null
   }
 }
 
 function buildInitialState() {
-  const saved = loadState()
+  const saved = loadSaved()
+
+  // ── Version migration ──
+  if (saved && saved._version !== STORAGE_VERSION) {
+    console.warn(
+      `[useAppState] Migrating state from version ${saved._version ?? 'unknown'} → ${STORAGE_VERSION}`
+    )
+    // Merge: keep user arrays, fill any missing settings keys from defaults
+    saved._version = STORAGE_VERSION
+  }
+
+  // ── No saved data: use seed defaults ──
+  if (!hasRealUserData(saved)) {
+    return {
+      _version: STORAGE_VERSION,
+      settings: { ...DEFAULT_SETTINGS },
+      dca:      DCA_ENTRIES,
+      dip:      DIP_ENTRIES,
+      futures:  FUTURES_ENTRIES,
+      grid:     GRID_ENTRIES,
+      triggers: TRIGGERS,
+    }
+  }
+
+  // ── Real user data exists: merge carefully ──
+  // settings: default first, then user overrides (so new fields get default values)
+  const mergedSettings = {
+    ...DEFAULT_SETTINGS,
+    ...(typeof saved.settings === 'object' && !Array.isArray(saved.settings)
+      ? saved.settings
+      : {}),
+  }
+
   return {
-    settings: { ...DEFAULT_SETTINGS, ...(saved?.settings || {}) },
-    dca:      saved?.dca      ?? DCA_ENTRIES,
-    dip:      saved?.dip      ?? DIP_ENTRIES,
-    futures:  saved?.futures  ?? FUTURES_ENTRIES,
-    grid:     saved?.grid     ?? GRID_ENTRIES,
-    triggers: saved?.triggers ?? TRIGGERS,
+    _version: STORAGE_VERSION,
+    settings: mergedSettings,
+    // Preserve user arrays; fall back to empty (not seed) to avoid duplicating seed data
+    dca:      isArr(saved.dca)      ? saved.dca      : [],
+    dip:      isArr(saved.dip)      ? saved.dip      : [],
+    futures:  isArr(saved.futures)  ? saved.futures  : [],
+    grid:     isArr(saved.grid)     ? saved.grid     : [],
+    triggers: isArr(saved.triggers) ? saved.triggers : TRIGGERS,
   }
 }
+
+/* ── Hook ────────────────────────────────────────────── */
 
 export function useAppState() {
   const [state, setState] = useState(buildInitialState)
 
-  // Persist on every change
+  // Persist on every change (include version)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...state,
+        _version: STORAGE_VERSION,
+      }))
+    } catch (e) {
+      console.warn('[useAppState] Failed to persist state.', e)
+    }
   }, [state])
 
   const updateSettings = useCallback((patch) => {
@@ -52,16 +126,16 @@ export function useAppState() {
     setState(s => ({ ...s, triggers }))
   }, [])
 
-  // Restore from JSON backup — replaces full state
+  // Restore from JSON backup — replaces full state, preserves version
   const restoreState = useCallback((backup) => {
-    const arr = (v, fb) => Array.isArray(v) ? v : fb
     setState({
+      _version: STORAGE_VERSION,
       settings: { ...DEFAULT_SETTINGS, ...(backup.settings || {}) },
-      dca:      arr(backup.dca,      []),
-      dip:      arr(backup.dip,      []),
-      futures:  arr(backup.futures,  []),
-      grid:     arr(backup.grid,     []),
-      triggers: arr(backup.triggers, []),
+      dca:      isArr(backup.dca)      ? backup.dca      : [],
+      dip:      isArr(backup.dip)      ? backup.dip      : [],
+      futures:  isArr(backup.futures)  ? backup.futures  : [],
+      grid:     isArr(backup.grid)     ? backup.grid     : [],
+      triggers: isArr(backup.triggers) ? backup.triggers : TRIGGERS,
     })
   }, [])
 
