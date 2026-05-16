@@ -43,6 +43,16 @@ export function parseBackup(jsonStr) {
     return { ok: false, error: 'File is not valid JSON.' }
   }
 
+  // Check backup version compatibility
+  const backupVer = parsed?._backup?.version
+  if (backupVer != null && Number(backupVer) > BACKUP_VERSION) {
+    return {
+      ok: false,
+      error: 'This backup was created by a newer version of the app. Please update the app before importing it.',
+    }
+  }
+  // Missing _backup or missing _backup.version = legacy (version 0) — allow import
+
   // Check required keys
   for (const key of REQUIRED_KEYS) {
     if (!(key in parsed)) {
