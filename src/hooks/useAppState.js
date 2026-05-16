@@ -8,6 +8,15 @@ import {
   DEFAULT_SETTINGS, DCA_ENTRIES, DIP_ENTRIES,
   FUTURES_ENTRIES, GRID_ENTRIES, TRIGGERS,
 } from '../data/seed'
+import { sanitizeDcaEntry, sanitizeDipEntry, sanitizeFuturesEntry, sanitizeGridEntry, sanitizeEntries } from '../utils/validators'
+
+/** Map entry type key → per-entry sanitizer */
+const ENTRY_SANITIZERS = {
+  dca:     sanitizeDcaEntry,
+  dip:     sanitizeDipEntry,
+  futures: sanitizeFuturesEntry,
+  grid:    sanitizeGridEntry,
+}
 
 const STORAGE_KEY     = 'btc-stack-v5'
 const STORAGE_VERSION = 2
@@ -119,7 +128,18 @@ export function useAppState() {
   }, [])
 
   const addEntry = useCallback((type, entry) => {
-    setState(s => ({ ...s, [type]: [entry, ...s[type]] }))
+    const sanitize = ENTRY_SANITIZERS[type]
+    if (sanitize) {
+      const clean = sanitize(entry)
+      if (!clean) {
+        console.warn(`[useAppState] addEntry(${type}): entry rejected by validator`, entry)
+        return
+      }
+      setState(s => ({ ...s, [type]: [clean, ...s[type]] }))
+    } else {
+      // Unknown type (e.g. future extension) — pass through unchanged
+      setState(s => ({ ...s, [type]: [entry, ...s[type]] }))
+    }
   }, [])
 
   const updateTriggers = useCallback((triggers) => {
@@ -131,10 +151,10 @@ export function useAppState() {
     setState({
       _version: STORAGE_VERSION,
       settings: { ...DEFAULT_SETTINGS, ...(backup.settings || {}) },
-      dca:      isArr(backup.dca)      ? backup.dca      : [],
-      dip:      isArr(backup.dip)      ? backup.dip      : [],
-      futures:  isArr(backup.futures)  ? backup.futures  : [],
-      grid:     isArr(backup.grid)     ? backup.grid     : [],
+      dca:      sanitizeEntries('dca',     isArr(backup.dca)     ? backup.dca     : []),
+      dip:      sanitizeEntries('dip',     isArr(backup.dip)     ? backup.dip     : []),
+      futures:  sanitizeEntries('futures', isArr(backup.futures) ? backup.futures : []),
+      grid:     sanitizeEntries('grid',    isArr(backup.grid)    ? backup.grid    : []),
       triggers: isArr(backup.triggers) ? backup.triggers : TRIGGERS,
     })
   }, [])
