@@ -2,39 +2,59 @@
  * Business logic — metrics, projection math, dip calculator.
  * Pure functions: no side effects, no UI imports.
  */
+import { guardEntry } from './validators'
 
 // ── Portfolio Metrics ─────────────────────────────────
 
 export function computeMetrics({ dca, dip, futures, grid, settings }) {
-  const price   = +settings.currentPrice || 0
-  const usdthb  = +settings.usdthb || 33
+  const price  = +settings.currentPrice || 0
+  const usdthb = +settings.usdthb || 33
 
-  const dcaBtc  = dca.reduce((s, x) => s + (+x.btcQty || 0), 0)
-  const dipBtc  = dip.reduce((s, x) => s + (+x.btcQty || 0), 0)
+  // Guard all entries against NaN/Infinity fields before reduction
+  const safeDca     = dca.map(guardEntry)
+  const safeDip     = dip.map(guardEntry)
+  const safeFutures = futures.map(guardEntry)
+  const safeGrid    = grid.map(guardEntry)
+
+  // Only count positive BTC qty for holdings (exclude transfer-out fees from cost basis)
+  const dcaBtc  = safeDca.reduce((s, x) => s + (+x.btcQty || 0), 0)
+  const dipBtc  = safeDip.reduce((s, x) => s + (+x.btcQty || 0), 0)
   const totalBtc = dcaBtc + dipBtc
 
-  const dcaInv  = dca.reduce((s, x) => s + Math.abs(+x.usdtAmount || 0), 0)
-  const dipInv  = dip.reduce((s, x) => s + Math.abs(+x.usdtAmount || 0), 0)
+  // Cost basis: only entries where money was actually spent (usdtAmount > 0)
+  const dcaInv  = safeDca.reduce((s, x) => s + (x.btcQty > 0 ? Math.abs(+x.usdtAmount || 0) : 0), 0)
+  const dipInv  = safeDip.reduce((s, x) => s + (x.btcQty > 0 ? Math.abs(+x.usdtAmount || 0) : 0), 0)
   const totalInv = dcaInv + dipInv
 
-  const avgCost  = totalBtc > 0 ? totalInv / totalBtc : 0
-  const futPnl   = futures.reduce((s, x) => s + (+x.pnlUsdt || 0), 0)
-  const gridPnl  = grid.reduce((s, x) => s + (+x.netProfitUsdt || 0), 0)
-  const wins     = futures.filter(x => +x.pnlUsdt > 0).length
-  const winRate  = futures.length ? (wins / futures.length) * 100 : 0
+  // Avg cost per BTC (cost basis / total BTC held)
+  const avgCost = totalBtc > 0 ? totalInv / totalBtc : 0
 
-  const mo      = new Date().toISOString().slice(0, 7)
-  const moDca   = dca.filter(x => String(x.date).slice(0, 7) === mo)
-  const moBtc   = moDca.reduce((s, x) => s + (+x.btcQty || 0), 0)
-  const moInv   = moDca.reduce((s, x) => s + Math.abs(+x.usdtAmount || 0), 0)
+  // Unrealized PnL = current market value minus total cost basis
+  const marketValue  = totalBtc * price
+  const unrealPnlUsd = marketValue - totalInv
+  // PnL % relative to cost basis (how much has investment grown)
+  const unrealPnlPct = totalInv > 0 ? (unrealPnlUsd / totalInv) * 100 : 0
+
+  const futPnl  = safeFutures.reduce((s, x) => s + (+x.pnlUsdt || 0), 0)
+  const gridPnl = safeGrid.reduce((s, x) => s + (+x.netProfitUsdt || 0), 0)
+  const wins    = safeFutures.filter(x => +x.pnlUsdt > 0).length
+  const winRate = safeFutures.length ? (wins / safeFutures.length) * 100 : 0
+
+  const mo    = new Date().toISOString().slice(0, 7)
+  const moDca = safeDca.filter(x => String(x.date).slice(0, 7) === mo)
+  const moBtc = moDca.reduce((s, x) => s + (+x.btcQty || 0), 0)
+  const moInv = moDca.reduce((s, x) => s + (x.btcQty > 0 ? Math.abs(+x.usdtAmount || 0) : 0), 0)
 
   return {
-    price, usdthb, dcaBtc, dipBtc, totalBtc,
-    dcaInv, dipInv, totalInv, avgCost,
+    price, usdthb,
+    dcaBtc, dipBtc, totalBtc,
+    dcaInv, dipInv, totalInv,
+    avgCost,
+    marketValue, unrealPnlUsd, unrealPnlPct,
     futPnl, gridPnl, wins, winRate,
     moCount: moDca.length, moBtc, moInv,
-    futsToBtc:     price > 0 ? futPnl  / price : 0,
-    gridToBtc:     price > 0 ? gridPnl / price : 0,
+    futsToBtc:      price > 0 ? futPnl  / price : 0,
+    gridToBtc:      price > 0 ? gridPnl / price : 0,
     totalConverted: price > 0 ? (futPnl + gridPnl) / price : 0,
   }
 }
@@ -52,7 +72,6 @@ export function estimateProjection({ settings, dcaBtc }) {
   const mgr  = Math.pow(1 + gr, 1 / 12) - 1
   const months = Math.max(0, Math.round((tAge - age) * 12))
 
-  // Build path for chart
   let btc = cur, price = p0
   const path = [{ age, btc }]
   for (let i = 1; i <= months; i++) {
@@ -62,11 +81,10 @@ export function estimateProjection({ settings, dcaBtc }) {
   }
   const estimatedBTCAtTargetAge = btc
 
-  // Find when goal is reached
   let b2 = cur, p2 = p0, mo2 = 0
   while (b2 < tgt && mo2 < 1200) { b2 += dca / p2; p2 *= (1 + mgr); mo2++ }
-  const reachAge  = age + mo2 / 12
-  const shortfall = Math.max(0, tgt - btc)
+  const reachAge    = age + mo2 / 12
+  const shortfall   = Math.max(0, tgt - btc)
   const requiredDca = solveRequiredDca({ cur, tgt, age, tAge, p0, gr })
 
   return {
@@ -100,9 +118,9 @@ function solveRequiredDca({ cur, tgt, age, tAge, p0, gr }) {
 
 function buildSuggestions({ cur, tgt, age, tAge, p0, dca, gr }) {
   return [
-    { extra: 100,  growthAdj: gr,   icon: '💵', label: `Add $100/month`,          cls: 's1' },
-    { extra: 300,  growthAdj: gr,   icon: '💰', label: `Add $300/month`,          cls: 's2' },
-    { extra: 0,    growthAdj: 0.15, icon: '📈', label: `Growth at 15%/yr`,        cls: 's3' },
+    { extra: 100, growthAdj: gr,   icon: '💵', label: 'Add $100/month',   cls: 's1' },
+    { extra: 300, growthAdj: gr,   icon: '💰', label: 'Add $300/month',   cls: 's2' },
+    { extra: 0,   growthAdj: 0.15, icon: '📈', label: 'Growth at 15%/yr', cls: 's3' },
   ].map(({ extra, growthAdj, icon, label, cls }) => {
     const s    = projectWith({ cur, tgt, age, tAge, p0, dca: dca + extra, gr: growthAdj })
     const diff = s.reachAge - tAge
@@ -120,47 +138,17 @@ function buildSuggestions({ cur, tgt, age, tAge, p0, dca, gr }) {
 
 // ── Buy The Dip Calculator ────────────────────────────
 
-/**
- * Calculate investment per layer from user inputs.
- *
- * @param {number} totalBudgetUsd  - Total capital in USD
- * @param {number} usdthb          - USD/THB exchange rate
- * @param {number} refPrice        - Reference BTC price (USD)
- * @param {Array}  layers          - [{ level, pct, dropPct }]
- * @returns {Array}                - Enriched layer objects with amounts
- */
 export function calcDipLayers({ totalBudgetUsd, usdthb, refPrice, layers }) {
   return layers.map(layer => {
-    const usdAmount  = (totalBudgetUsd * layer.pct) / 100
-    const thbAmount  = usdAmount * usdthb
-    const buyPrice   = refPrice * (1 + layer.dropPct / 100)
-    const btcEst     = buyPrice > 0 ? usdAmount / buyPrice : 0
+    const usdAmount = (totalBudgetUsd * layer.pct) / 100
+    const thbAmount = usdAmount * usdthb
+    const buyPrice  = refPrice * (1 + layer.dropPct / 100)
+    const btcEst    = buyPrice > 0 ? usdAmount / buyPrice : 0
     return { ...layer, usdAmount, thbAmount, buyPrice, btcEst }
   })
 }
 
-/** Validate that layer percentages sum to exactly 100 */
 export function validateDipLayers(layers) {
   const sum = layers.reduce((s, l) => s + (Number(l.pct) || 0), 0)
   return { valid: Math.abs(sum - 100) < 0.001, sum }
-}
-
-// ── Futures ROI ───────────────────────────────────────
-
-/**
- * Correct Futures ROI formula:
- *   roi = (pnlUsdt / (entryPrice * sizeBtc / leverage)) * 100
- *
- * @param {number} pnlUsdt     — realized PnL in USDT
- * @param {number} entryPrice  — entry price USD
- * @param {number} sizeBtc     — position size in BTC
- * @param {string|number} leverageRaw — e.g. "3x", "3", 3
- * @returns {number} roi %  (0 if inputs invalid / divide by zero)
- */
-export function calcFuturesRoi(pnlUsdt, entryPrice, sizeBtc, leverageRaw) {
-  // Parse leverage — strip trailing 'x', default 1
-  const lev = Math.max(1, parseFloat(String(leverageRaw).replace(/[^\d.]/g, '')) || 1)
-  const margin = (entryPrice * sizeBtc) / lev
-  if (!margin || !isFinite(margin) || margin === 0) return 0
-  return (pnlUsdt / margin) * 100
 }
