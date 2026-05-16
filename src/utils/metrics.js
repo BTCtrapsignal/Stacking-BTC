@@ -152,3 +152,13 @@ export function validateDipLayers(layers) {
   const sum = layers.reduce((s, l) => s + (Number(l.pct) || 0), 0)
   return { valid: Math.abs(sum - 100) < 0.001, sum }
 }
+
+// Backward-compatible export — satisfies FuturesPage import
+export function calcFuturesRoi(entry) {
+  const pnl      = Number(entry?.pnlUsdt)     || 0
+  const entryPx  = Number(entry?.entryPrice)  || 0
+  const size     = Number(entry?.sizeBtc)     || 0
+  const lev      = Number(entry?.leverage)    || 1
+  const margin   = entryPx * size / lev
+  return margin > 0 ? (pnl / margin) * 100 : 0
+}
