@@ -5,7 +5,7 @@
  */
 import { useState, useMemo } from 'react'
 import { X } from 'lucide-react'
-import { calcFuturesRoi } from '../../utils/metrics'
+
 
 const MODES = ['DCA', 'Dip', 'Futures', 'Grid']
 
