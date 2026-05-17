@@ -29,7 +29,15 @@ export default function App() {
   const { state, updateSettings, addEntry, restoreState } = useAppState()
   const { isDark, toggle: toggleTheme }     = useTheme()
 
-  const [tab, setTab]             = useState('home')
+  const VALID_TABS = ['home', 'dca', 'futures', 'triggers', 'more']
+  const [tab, setTab] = useState(() => {
+    const saved = sessionStorage.getItem('btc-stack-tab')
+    return VALID_TABS.includes(saved) ? saved : 'home'
+  })
+  const handleTabChange = useCallback((t) => {
+    sessionStorage.setItem('btc-stack-tab', t)
+    setTab(t)
+  })
   const [addOpen, setAddOpen]     = useState(false)
   const [goalOpen, setGoalOpen]   = useState(false)
   const [planOpen, setPlanOpen]   = useState(false)
@@ -114,7 +122,7 @@ export default function App() {
       </PageContainer>
 
       {/* ── Bottom nav ── */}
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={handleTabChange} />
 
       {/* ── Sheets ── */}
       <AddEntrySheet open={addOpen} onClose={() => setAddOpen(false)} onSave={handleSave} settings={state.settings} />
